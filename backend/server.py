@@ -289,6 +289,56 @@ STARTER_ACTIVITIES = [
     ("Create a simple form validation demo", "Empty fields, wrong emails, kind error messages.", "Coding / Building", 30),
     ("Make a local storage mini project", "Save something on refresh — a note, a name, a toggle.", "Coding / Building", 45),
     ("Build a small API data display", "Fetch, parse, show — one endpoint, one clean list.", "Coding / Building", 45),
+    ("Read a short article", "Something you've been meaning to open — now's the time.", "Reading", 10),
+    ("Read one chapter of a book", "One chapter, one warm cup, no rush.", "Reading", 30),
+    ("Read five pages of a book", "Small but honest progress.", "Reading", 10),
+    ("Read a technical blog post", "The kind you'd usually skim — read it properly.", "Reading", 20),
+    ("Read a research paper abstract", "The whole idea, distilled into one paragraph.", "Reading", 5),
+    ("Read a short essay", "One writer, one argument, one page or two.", "Reading", 15),
+    ("Read a news analysis", "Beyond the headline — what someone thinks it means.", "Reading", 15),
+    ("Read a biography excerpt", "A slice of someone's life, well told.", "Reading", 20),
+    ("Read a science article", "One new idea from the corners of the field.", "Reading", 20),
+    ("Read a history article", "Old story, new lens.", "Reading", 20),
+    ("Read a technology article", "Something recent, something worth understanding.", "Reading", 15),
+    ("Read a psychology article", "Notice one thing about how minds work.", "Reading", 20),
+    ("Read a productivity article", "Take what fits your life; leave the rest.", "Reading", 15),
+    ("Read a design article", "Type, colour, hierarchy — a quiet vocabulary lesson.", "Reading", 20),
+    ("Read a programming tutorial", "Read all the way through before you touch the keyboard.", "Reading", 30),
+    ("Read a documentation page", "The one you've been avoiding.", "Reading", 15),
+    ("Read an interesting Wikipedia article", "Follow the first link that catches your eye.", "Reading", 20),
+    ("Read a book introduction", "The doorway the author built for you.", "Reading", 15),
+    ("Read a book conclusion", "Sometimes the ending is where the honest thinking lives.", "Reading", 10),
+    ("Read a poem", "One poem, twice — the second read is always richer.", "Reading", 5),
+    ("Read a short story", "A whole world in a handful of pages.", "Reading", 30),
+    ("Read a personal essay", "Someone thinking out loud, honestly.", "Reading", 15),
+    ("Read a case study", "What happened, why it mattered, what they learned.", "Reading", 30),
+    ("Read an interview transcript", "Voices are different from summaries.", "Reading", 20),
+    ("Read a product review", "How someone thinks about the thing you were curious about.", "Reading", 10),
+    ("Read a beginner programming guide", "Even seasoned coders enjoy a first-principles refresher.", "Reading", 30),
+    ("Read about a new technology", "One new tool or idea reshaping something.", "Reading", 20),
+    ("Read about an unfamiliar topic", "Pick a subject you know nothing about, and start.", "Reading", 20),
+    ("Read about a historical event", "One event, one honest telling.", "Reading", 20),
+    ("Read about a famous invention", "The story behind the thing you use every day.", "Reading", 15),
+    ("Read about a scientific discovery", "The moment someone saw what no one had seen.", "Reading", 20),
+    ("Read about a famous person", "Not the myth — the work.", "Reading", 20),
+    ("Read about a different culture", "Traditions, rhythms, food, and how it's all threaded together.", "Reading", 30),
+    ("Read a financial literacy article", "One idea today, quiet compounding tomorrow.", "Reading", 20),
+    ("Read a career advice article", "Take one useful sentence and leave the noise.", "Reading", 15),
+    ("Read a communication guide", "How to say the harder thing well.", "Reading", 20),
+    ("Read a leadership article", "Leadership by example, not by volume.", "Reading", 15),
+    ("Read a problem-solving article", "A framework you might quietly reuse later.", "Reading", 20),
+    ("Read a learning strategy article", "How you learn matters as much as what you learn.", "Reading", 15),
+    ("Read a computer science concept", "One clean explanation, then close the tab.", "Reading", 20),
+    ("Read an AI article", "One thoughtful piece, not ten hot takes.", "Reading", 20),
+    ("Read a data science article", "How numbers become questions become stories.", "Reading", 30),
+    ("Read a cybersecurity article", "One small habit today, one fewer worry tomorrow.", "Reading", 20),
+    ("Read a web development article", "Something new from the platform, explained plainly.", "Reading", 20),
+    ("Read a user experience article", "How small choices become big feelings.", "Reading", 15),
+    ("Read an open-source project README", "The front door of a project — read it slowly.", "Reading", 10),
+    ("Read a programming documentation example", "One example, understood well, is worth ten skimmed.", "Reading", 15),
+    ("Read a technical concept and summarize it", "Read it, then write it back in your own words.", "Reading", 45),
+    ("Read something outside your usual interests", "The stretch is quiet, but it does count.", "Reading", 60),
+    ("Read something you bookmarked earlier", "The tab you keep meaning to open — this is its moment.", "Reading", 20),
 ]
 
 
@@ -405,7 +455,7 @@ async def update_profile(data: ProfileIn, user=Depends(current_user)):
 
 @api.get("/activities")
 async def activities(user=Depends(current_user)):
-    return await db.activities.find({"user_id": user["id"]}, {"_id": 0}).sort("created_at", 1).to_list(200)
+    return await db.activities.find({"user_id": user["id"]}, {"_id": 0}).sort("created_at", 1).to_list(2000)
 
 
 @api.post("/activities")
