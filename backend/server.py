@@ -10,16 +10,30 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 import bcrypt
+import hashlib
+import hmac
 import jwt
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, RedirectResponse
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, EmailStr, Field
+from requests_oauthlib import OAuth2Session
 
 client = AsyncIOMotorClient(os.environ["MONGO_URL"])
 db = client[os.environ["DB_NAME"]]
 JWT_ALGORITHM = "HS256"
 JWT_SECRET = os.environ["JWT_SECRET"]
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "").strip()
+GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "").strip()
+FRONTEND_POST_LOGIN_URL = os.environ.get("FRONTEND_POST_LOGIN_URL", "").strip() or "/"
+GOOGLE_AUTHORIZATION_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_SCOPES = ["openid", "email", "profile"]
+GOOGLE_STATE_COOKIE = "google_oauth_state"
 logger = logging.getLogger("little-while")
 
 app = FastAPI(title="Little While API")
@@ -44,7 +58,12 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, hashed: str) -> bool:
-    return bcrypt.checkpw(password.encode(), hashed.encode())
+    if not hashed:
+        return False
+    try:
+        return bcrypt.checkpw(password.encode(), hashed.encode())
+    except ValueError:
+        return False
 
 
 def token(user_id: str, kind: str, minutes: int) -> str:
@@ -742,9 +761,76 @@ async def reset_password(data: ResetIn):
     return {"message": "Your password was updated. You can sign in now."}
 
 
-@api.post("/auth/google")
-async def google_placeholder():
-    raise HTTPException(501, "Google sign-in is ready for OAuth credentials. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable it.")
+def google_configured() -> bool:
+    return bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET and GOOGLE_REDIRECT_URI)
+
+
+@api.get("/auth/google/status")
+async def google_status():
+    return {"configured": google_configured()}
+
+
+@api.get("/auth/google")
+async def google_start():
+    if not google_configured():
+        return JSONResponse(status_code=503, content={"detail": "Google sign-in is not configured yet. Add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI to enable it."})
+    state = secrets.token_urlsafe(32)
+    oauth = OAuth2Session(client_id=GOOGLE_CLIENT_ID, redirect_uri=GOOGLE_REDIRECT_URI, scope=GOOGLE_SCOPES)
+    authorization_url, _ = oauth.authorization_url(GOOGLE_AUTHORIZATION_URL, state=state, access_type="online", include_granted_scopes="true", prompt="select_account")
+    response = RedirectResponse(authorization_url, status_code=307)
+    response.set_cookie(GOOGLE_STATE_COOKIE, state, max_age=600, httponly=True, secure=True, samesite="lax", path="/api/auth/google")
+    return response
+
+
+@api.get("/auth/google/callback")
+async def google_callback(request: Request):
+    if not google_configured():
+        return JSONResponse(status_code=503, content={"detail": "Google sign-in is not configured."})
+    query = request.query_params
+    if query.get("error"):
+        return JSONResponse(status_code=400, content={"detail": "Google sign-in was cancelled or denied."})
+    returned_state = query.get("state") or ""
+    stored_state = request.cookies.get(GOOGLE_STATE_COOKIE) or ""
+    if not returned_state or not stored_state or not hmac.compare_digest(returned_state, stored_state):
+        return JSONResponse(status_code=400, content={"detail": "Invalid or expired Google OAuth state."})
+    code = query.get("code")
+    if not code:
+        return JSONResponse(status_code=400, content={"detail": "Google did not return an authorization code."})
+    try:
+        oauth = OAuth2Session(client_id=GOOGLE_CLIENT_ID, redirect_uri=GOOGLE_REDIRECT_URI, state=stored_state)
+        token = oauth.fetch_token(token_url=GOOGLE_TOKEN_URL, code=code, client_secret=GOOGLE_CLIENT_SECRET, include_client_id=True, timeout=15)
+        raw_id_token = token.get("id_token")
+        if not raw_id_token:
+            raise ValueError("no id_token in Google response")
+        id_info = google_id_token.verify_oauth2_token(raw_id_token, google_requests.Request(), audience=GOOGLE_CLIENT_ID)
+        if id_info.get("iss") not in {"accounts.google.com", "https://accounts.google.com"}:
+            raise ValueError("unexpected issuer")
+        if id_info.get("email_verified") is not True:
+            raise ValueError("email not verified")
+        email = (id_info.get("email") or "").strip().lower()
+        if not email or "@" not in email:
+            raise ValueError("no valid email in Google token")
+        display_name = (id_info.get("name") or email.split("@", 1)[0]).strip()[:60] or "Friend"
+    except Exception as exc:
+        logger.warning("Google OAuth callback failed: %s", type(exc).__name__)
+        return JSONResponse(status_code=401, content={"detail": "Google sign-in could not be completed."})
+    user = await db.users.find_one({"email": email}, {"_id": 0})
+    if not user:
+        user = {"id": str(uuid.uuid4()), "email": email, "password_hash": "", "display_name": display_name,
+                "timezone": "UTC", "theme": "light", "created_at": iso(now()), "auth_provider": "google"}
+        try:
+            await db.users.insert_one(user)
+        except Exception:
+            user = await db.users.find_one({"email": email}, {"_id": 0})
+        if user:
+            await seed_user(user["id"])
+    if not user:
+        return JSONResponse(status_code=500, content={"detail": "Could not create your account."})
+    await db.login_attempts.delete_one({"identifier": email})
+    response = RedirectResponse(url=FRONTEND_POST_LOGIN_URL, status_code=303)
+    set_auth(response, user["id"])
+    response.delete_cookie(GOOGLE_STATE_COOKIE, path="/api/auth/google")
+    return response
 
 
 @api.patch("/profile")
