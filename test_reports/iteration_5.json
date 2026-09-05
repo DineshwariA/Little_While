@@ -1,0 +1,25 @@
+{
+  "summary": "Backend-only regression for the 50 Personal Growth starter-activities addition. Extended /app/backend/tests/test_social_seed.py with two new cases (PG title uniqueness, PG duration coverage {5,10,20,30} within allowed {5,10,15,20,30,45,60}). Verified: auth flow (register/login/auth/me), fresh-user total=508 with exact per-category distribution (Creativity=51, Learning=51, Coding / Building=51, Reading=51, Wellness=51, Movement=51, Brain Gym=51, Social=50, Everyday Life=51, Personal Growth=50), Social still 50 unique + 4-bucket coverage, Personal Growth 50 unique + 4-bucket coverage, idempotent re-login (no reseed), persistent-account not reseeded, GET /api/activities >200 (to_list(2000)), custom activity POST persists, favorite PATCH toggles. All 13 pytest cases passed against the public REACT_APP_BACKEND_URL.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_social_seed.py",
+    "/app/test_reports/pytest/pg_seed_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py is now 932 lines (up from 833) - well past the 700-line split threshold. STARTER_ACTIVITIES (~500+ lines of pure data across 10 categories) should be extracted into /app/backend/starter_activities.py to keep server.py focused on routing/logic.",
+    "GET /api/activities .to_list(2000) hard cap unchanged - with 508 seeded rows per user + customs, a heavy user could approach this. Consider server-side pagination or per-category filtering before that becomes a real issue.",
+    "seed_user() default-favorites logic still hard-codes {'Reading','Wellness'} - as user categories grow (now 10), consider making auto-favorite behavior configurable or removing it."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_social_seed.py (added TestFreshUserSeeding::test_personal_growth_titles_unique and test_personal_growth_duration_coverage)"
+  ],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "not tested (per request)"},
+  "test_credentials": "Existing: littlewhile.test@example.com / LittleWhile123! (used for existing-user non-reseed check). Fresh accounts generated per run with pattern test-social-<ts>-<rand>@example.com / TestPass123!.",
+  "seed_data_creation": "Each run registers one fresh account (508 seeded activities) and creates one custom activity (TEST_custom_activity) under that account. No cleanup performed; fresh emails per run avoid collisions.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "test_social_seed.py is the authoritative regression for starter-activity content across all 10 categories. EXPECTED_COUNTS at top of file is the single source of truth - update it if STARTER_ACTIVITIES changes. Personal Growth tests mirror Social tests structurally; add analogous test pairs for any future new category.",
+  "rca of the issue": "N/A - no issues found. 50 Personal Growth activities added correctly: category string exact match, 50 unique titles, duration coverage includes required buckets (5,10,20,30) and stays within allowed set, total 508 activities seeded on fresh registration, idempotency preserved."
+}

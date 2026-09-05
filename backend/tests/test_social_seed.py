@@ -44,8 +44,9 @@ EXPECTED_COUNTS = {
     "Brain Gym": 51,
     "Social": 50,
     "Everyday Life": 51,
+    "Personal Growth": 50,
 }
-EXPECTED_TOTAL = sum(EXPECTED_COUNTS.values())  # 458
+EXPECTED_TOTAL = sum(EXPECTED_COUNTS.values())  # 508
 
 
 def _new_email():
@@ -106,8 +107,6 @@ class TestFreshUserSeeding:
         counts = Counter(a["category"] for a in acts)
         for cat, expected in EXPECTED_COUNTS.items():
             assert counts.get(cat, 0) == expected, f"{cat}: expected {expected} got {counts.get(cat,0)}"
-        # Personal Growth not present
-        assert counts.get("Personal Growth", 0) == 0
 
     def test_social_titles_unique(self, fresh_session):
         r = fresh_session["session"].get(f"{API}/activities")
@@ -125,6 +124,22 @@ class TestFreshUserSeeding:
             assert d in durations, f"Social missing duration bucket {d} (got {sorted(durations)})"
         allowed = {5, 10, 15, 20, 30, 45, 60}
         assert durations.issubset(allowed), f"unsupported Social durations: {durations - allowed}"
+
+    def test_personal_growth_titles_unique(self, fresh_session):
+        r = fresh_session["session"].get(f"{API}/activities")
+        pg = [a for a in r.json() if a["category"] == "Personal Growth"]
+        assert len(pg) == 50
+        titles = [a["title"] for a in pg]
+        assert len(set(titles)) == 50, "duplicate Personal Growth titles found"
+
+    def test_personal_growth_duration_coverage(self, fresh_session):
+        r = fresh_session["session"].get(f"{API}/activities")
+        pg = [a for a in r.json() if a["category"] == "Personal Growth"]
+        durations = set(a["duration"] for a in pg)
+        for d in (5, 10, 20, 30):
+            assert d in durations, f"Personal Growth missing duration bucket {d} (got {sorted(durations)})"
+        allowed = {5, 10, 15, 20, 30, 45, 60}
+        assert durations.issubset(allowed), f"unsupported Personal Growth durations: {durations - allowed}"
 
 
 # ---------- Idempotency ----------
