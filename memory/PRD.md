@@ -1,3 +1,10 @@
+
+## Iteration 3 (Feb 2026)
+- Added Calendar View: new top-level nav `/calendar`, monthly grid of days with completed/partial/skipped sessions, day-detail panel with categories, focused minutes, outcomes, notes and next-time reflections.
+- New backend endpoint `GET /api/sessions/calendar?year=&month=` — user-scoped, timezone-aware, returns per-day aggregation and month totals.
+- Fixed frontend dependency conflict for Vercel: `date-fns` `4.1.0` → `^3.6.0`, `react-day-picker` `8.10.1` → `^9.0.0` (React 19 compatible). `npm install` now succeeds without `--force` / `--legacy-peer-deps`.
+- Iteration 3 tests: 6/6 pytest pass, calendar UI E2E pass.
+
 # Little While — Product Record
 
 ## Original problem statement

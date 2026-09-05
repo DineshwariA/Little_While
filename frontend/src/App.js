@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BrowserRouter, NavLink, Route, Routes, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-import { ArrowRight, BarChart3, BookOpen, Brain, Check, ChevronDown, CircleHelp, Clock3, Compass, Heart, Leaf, LogOut, Menu, Moon, Pause, Pencil, Play, Plus, RotateCcw, Settings, Sparkles, Sun, Target, TimerReset, X, Zap } from "lucide-react";
+import { ArrowRight, BarChart3, BookOpen, Brain, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Clock3, Compass, Heart, Leaf, LogOut, Menu, Moon, Pause, Pencil, Play, Plus, RotateCcw, Settings, Sparkles, Sun, Target, TimerReset, X, Zap } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import "@/App.css";
 
@@ -33,7 +33,7 @@ function Workspace({ user, setUser }) {
   useEffect(() => { refresh().catch(() => toast.error("We couldn't load your journey.")); }, [refresh]);
   const logout = async () => { await api.post("/auth/logout"); setUser(false); };
   if (!dashboard) return <div className="loading-screen" data-testid="workspace-loading">Gathering your little moments…</div>;
-  return <div className="app-shell"><aside className={mobileNav ? "sidebar open" : "sidebar"}><div className="brand"><span className="brand-dot" /> little while</div><p className="sidebar-label">Your space</p><nav>{[["/", "Home", Leaf], ["/explore", "Explore", Compass], ["/focus", "Focus", Clock3], ["/journey", "Journey", BookOpen], ["/insights", "Insights", BarChart3]].map(([href, label, Icon]) => <NavLink key={href} to={href} end={href === "/"} data-testid={`nav-${label.toLowerCase()}`} onClick={() => setMobileNav(false)}><Icon size={18} /> {label}</NavLink>)}</nav><div className="sidebar-bottom"><NavLink to="/profile" data-testid="nav-profile"><Settings size={18} /> Profile</NavLink><button className="quiet-button" data-testid="logout-button" onClick={logout}><LogOut size={18} /> Sign out</button><div className="sidebar-note"><span className="tiny-sun"><Sun size={14} /></span><p>There is no rush.<br /><strong>Your time is yours.</strong></p></div></div></aside><button className="mobile-menu" data-testid="mobile-menu-button" onClick={() => setMobileNav(!mobileNav)}><Menu size={21} /></button><main className="main-content"><Routes><Route path="/" element={<Home user={user} dashboard={dashboard} activities={activities} refresh={refresh} openCreate={() => setShowCreate(true)} />} /><Route path="/explore" element={<Explore activities={activities} onFavorite={refresh} openCreate={() => setShowCreate(true)} />} /><Route path="/focus" element={<Focus dashboard={dashboard} refresh={refresh} />} /><Route path="/journey" element={<Journey sessions={dashboard.sessions} />} /><Route path="/insights" element={<Insights stats={dashboard.stats} sessions={dashboard.sessions} />} /><Route path="/profile" element={<Profile user={user} setUser={setUser} />} /></Routes></main>{showCreate && <CreateActivity close={() => setShowCreate(false)} done={() => { setShowCreate(false); refresh(); }} />}</div>;
+  return <div className="app-shell"><aside className={mobileNav ? "sidebar open" : "sidebar"}><div className="brand"><span className="brand-dot" /> little while</div><p className="sidebar-label">Your space</p><nav>{[["/", "Home", Leaf], ["/explore", "Explore", Compass], ["/focus", "Focus", Clock3], ["/journey", "Journey", BookOpen], ["/calendar", "Calendar", CalendarDays], ["/insights", "Insights", BarChart3]].map(([href, label, Icon]) => <NavLink key={href} to={href} end={href === "/"} data-testid={`nav-${label.toLowerCase()}`} onClick={() => setMobileNav(false)}><Icon size={18} /> {label}</NavLink>)}</nav><div className="sidebar-bottom"><NavLink to="/profile" data-testid="nav-profile"><Settings size={18} /> Profile</NavLink><button className="quiet-button" data-testid="logout-button" onClick={logout}><LogOut size={18} /> Sign out</button><div className="sidebar-note"><span className="tiny-sun"><Sun size={14} /></span><p>There is no rush.<br /><strong>Your time is yours.</strong></p></div></div></aside><button className="mobile-menu" data-testid="mobile-menu-button" onClick={() => setMobileNav(!mobileNav)}><Menu size={21} /></button><main className="main-content"><Routes><Route path="/" element={<Home user={user} dashboard={dashboard} activities={activities} refresh={refresh} openCreate={() => setShowCreate(true)} />} /><Route path="/explore" element={<Explore activities={activities} onFavorite={refresh} openCreate={() => setShowCreate(true)} />} /><Route path="/focus" element={<Focus dashboard={dashboard} refresh={refresh} />} /><Route path="/journey" element={<Journey sessions={dashboard.sessions} />} /><Route path="/calendar" element={<CalendarPage />} /><Route path="/insights" element={<Insights stats={dashboard.stats} sessions={dashboard.sessions} />} /><Route path="/profile" element={<Profile user={user} setUser={setUser} />} /></Routes></main>{showCreate && <CreateActivity close={() => setShowCreate(false)} done={() => { setShowCreate(false); refresh(); }} />}</div>;
 }
 
 function Header({ eyebrow, title, sub, action }) { return <header className="page-header"><div><p className="eyebrow">{eyebrow}</p><h1 data-testid="page-title">{title}</h1>{sub && <p className="page-sub" data-testid="page-subtitle">{sub}</p>}</div>{action}</header>; }
@@ -60,6 +60,71 @@ function Journey({ sessions }) { const [query, setQuery] = useState(""); const [
 function Insights({ stats, sessions }) { const bars = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, index) => ({ day, value: sessions.filter((s) => new Date(s.ended_at).getDay() === (index + 1) % 7).reduce((sum, s) => sum + s.actual_duration, 0) })); const max = Math.max(...bars.map((b) => b.value), 1); return <><Header eyebrow="A wider view" title="Notice your patterns." sub="Insights without judgement — just a little perspective on where your time goes." /><div className="insight-stats"><Stat label="Total sessions" value={stats.total_sessions} testid="insights-total-sessions" /><Stat label="Focused time" value={`${Math.floor(stats.total_minutes / 60)}h ${stats.total_minutes % 60}m`} testid="insights-total-time" /><Stat label="Longest streak" value={`${stats.longest_streak} days`} testid="insights-longest-streak" /><Stat label="Completion rate" value={`${stats.completion_rate}%`} testid="insights-completion-rate" /></div><div className="insight-grid"><section className="chart-section"><div className="section-kicker"><span>This week</span><h2>Time spent, day by day</h2></div><div className="bars" data-testid="weekly-activity-chart">{bars.map((bar) => <div className="bar-column" key={bar.day}><div className="bar" style={{ height: `${Math.max(5, (bar.value / max) * 150)}px` }} title={`${bar.value} minutes`} /><span>{bar.day}</span></div>)}</div></section><section className="category-insight"><div className="section-kicker"><span>Your rhythm</span><h2>Most time in</h2></div><div className="big-category"><div className="category-ring"><Leaf size={22} /></div><strong data-testid="most-active-category">{stats.most_active_category}</strong></div><div className="insight-note"><Sparkles size={16} /> Keep following the threads that feel alive.</div></section></div></>; }
 
 function Profile({ user, setUser }) { const [name, setName] = useState(user.display_name); const [theme, setTheme] = useState(user.theme || "light"); const save = async (e) => { e.preventDefault(); const { data } = await api.patch("/profile", { display_name: name, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, theme }); setUser(data); document.documentElement.dataset.theme = theme; toast.success("Your profile is up to date."); }; return <><Header eyebrow="Your settings" title="Make it feel like yours." sub="Little adjustments for a space that fits your life." /><form className="profile-form" onSubmit={save}><label>Display name<input data-testid="profile-name-input" value={name} onChange={(e) => setName(e.target.value)} /></label><label>Email<input data-testid="profile-email-input" value={user.email} disabled /></label><div className="setting-row"><div><strong>Appearance</strong><span>Choose the mood for Little While.</span></div><div className="theme-toggle"><button type="button" className={theme === "light" ? "active" : ""} data-testid="theme-light-button" onClick={() => setTheme("light")}><Sun size={15} /> Light</button><button type="button" className={theme === "dark" ? "active" : ""} data-testid="theme-dark-button" onClick={() => setTheme("dark")}><Moon size={15} /> Dark</button></div></div><button className="primary-button" data-testid="save-profile-button">Save changes <Check size={16} /></button></form><div className="profile-note"><CircleHelp size={18} /><p>Password reset and Google sign-in can be completed from the account access screen when needed.</p></div></>; }
+
+function CalendarPage() {
+  const today = new Date();
+  const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() + 1 });
+  const [data, setData] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => { let cancelled = false; setLoading(true); api.get(`/sessions/calendar?year=${cursor.year}&month=${cursor.month}`).then(({ data }) => { if (cancelled) return; setData(data); setLoading(false); setSelected((prev) => data.days.find((d) => d.date === prev) ? prev : (data.days.find((d) => d.date === data.today)?.date || null)); }).catch(() => { if (!cancelled) { setLoading(false); toast.error("We couldn't load your calendar."); } }); return () => { cancelled = true; }; }, [cursor.year, cursor.month]);
+  const byDate = useMemo(() => Object.fromEntries((data?.days || []).map((d) => [d.date, d])), [data]);
+  const monthLabel = new Date(cursor.year, cursor.month - 1, 1).toLocaleString(undefined, { month: "long", year: "numeric" });
+  const firstOfMonth = new Date(Date.UTC(cursor.year, cursor.month - 1, 1));
+  const daysInMonth = new Date(Date.UTC(cursor.year, cursor.month, 0)).getUTCDate();
+  const startWeekday = (firstOfMonth.getUTCDay() + 6) % 7;
+  const cells = [];
+  for (let i = 0; i < startWeekday; i += 1) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d += 1) {
+    const key = `${cursor.year}-${String(cursor.month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    cells.push({ day: d, key, entry: byDate[key] || null, isToday: key === data?.today, isFuture: data?.today && key > data.today });
+  }
+  const shift = (delta) => setCursor(({ year, month }) => { const total = year * 12 + (month - 1) + delta; return { year: Math.floor(total / 12), month: (total % 12) + 1 }; });
+  const selectedEntry = selected ? byDate[selected] : null;
+  const monthTotals = (data?.days || []).reduce((acc, d) => ({ minutes: acc.minutes + d.total_minutes, sessions: acc.sessions + d.sessions.length, days: acc.days + 1 }), { minutes: 0, sessions: 0, days: 0 });
+  return <>
+    <Header eyebrow="Your month at a glance" title="Every day you showed up." sub="A quiet map of the moments you kept. Tap a day to remember what you did." />
+    <section className="calendar-wrap">
+      <div className="calendar-panel">
+        <div className="calendar-nav">
+          <button className="calendar-arrow" data-testid="calendar-prev-button" onClick={() => shift(-1)} aria-label="Previous month"><ChevronLeft size={17} /></button>
+          <div><span className="mini-label">Viewing</span><h2 data-testid="calendar-month-label">{monthLabel}</h2></div>
+          <button className="calendar-arrow" data-testid="calendar-next-button" onClick={() => shift(1)} aria-label="Next month"><ChevronRight size={17} /></button>
+        </div>
+        <div className="calendar-summary" data-testid="calendar-month-summary">
+          <div><span className="mini-label">Active days</span><strong>{monthTotals.days}</strong></div>
+          <div><span className="mini-label">Sessions</span><strong>{monthTotals.sessions}</strong></div>
+          <div><span className="mini-label">Focused time</span><strong>{Math.floor(monthTotals.minutes / 60)}h {monthTotals.minutes % 60}m</strong></div>
+        </div>
+        <div className="calendar-weekhead">{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((w) => <span key={w}>{w}</span>)}</div>
+        <div className="calendar-grid" data-testid="calendar-grid">
+          {cells.map((cell, index) => cell === null ? <span key={`e-${index}`} className="calendar-empty" /> : <button key={cell.key} className={`calendar-day${cell.entry ? " has-activity" : ""}${cell.isToday ? " is-today" : ""}${selected === cell.key ? " is-selected" : ""}${cell.isFuture ? " is-future" : ""}`} data-testid={`calendar-day-${cell.key}`} data-has-activity={Boolean(cell.entry)} disabled={cell.isFuture} onClick={() => setSelected(cell.key)} aria-label={`${cell.key}${cell.entry ? `, ${cell.entry.sessions.length} sessions` : ", no sessions"}`}><span className="calendar-day-num">{cell.day}</span>{cell.entry && <span className="calendar-day-dot" aria-hidden="true" />}{cell.entry && <span className="calendar-day-mins" aria-hidden="true">{cell.entry.total_minutes}m</span>}</button>)}
+        </div>
+        {loading && <div className="calendar-loading" data-testid="calendar-loading">Gathering your month…</div>}
+        <div className="calendar-legend" aria-hidden="true"><span className="legend-dot" /> A day you kept<span className="legend-today">Today</span></div>
+      </div>
+      <aside className="calendar-detail" data-testid="calendar-detail-panel">
+        {selectedEntry ? <>
+          <p className="eyebrow">{new Date(`${selectedEntry.date}T00:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</p>
+          <h2 data-testid="calendar-detail-heading">{selectedEntry.total_minutes} minutes, kept.</h2>
+          <div className="calendar-tags">{selectedEntry.categories.map((category) => <span key={category} className="calendar-tag" data-testid={`calendar-tag-${category.toLowerCase().replaceAll(" ", "-")}`}>{category}</span>)}</div>
+          <ul className="calendar-sessions" data-testid="calendar-sessions-list">
+            {selectedEntry.sessions.map((session) => <li key={session.id} data-testid={`calendar-session-${session.id}`}>
+              <div className="calendar-session-head"><span className={`outcome-dot ${session.outcome}`} /><strong>{session.title}</strong><time>{session.actual_duration} min</time></div>
+              <span className="calendar-session-meta">{session.category} · {session.outcome === "completed" ? "Completed" : session.outcome === "partial" ? "Partially completed" : "Skipped"}</span>
+              {session.notes && <p className="calendar-session-note"><em>“</em>{session.notes}<em>”</em></p>}
+              {session.continued && <p className="calendar-session-continued">Next time: {session.continued}</p>}
+            </li>)}
+          </ul>
+        </> : <div className="calendar-empty-state" data-testid="calendar-empty-day">
+          <Leaf size={26} />
+          <h3>{selected ? "A quiet day." : "Choose a day."}</h3>
+          <p>{selected ? "Nothing recorded here yet. Every quiet day still counts." : "Tap any day with a small mark to see what you kept."}</p>
+        </div>}
+      </aside>
+    </section>
+  </>;
+}
 
 function CreateActivity({ close, done }) { const [form, setForm] = useState({ title: "", description: "", category: "Personal Growth", duration: 20, effort: "Gentle", goal: "", notes: "" }); const submit = async (e) => { e.preventDefault(); try { await api.post("/activities", { ...form, duration: Number(form.duration) }); toast.success("Activity saved for later."); done(); } catch (error) { toast.error(apiError(error)); } }; return <div className="modal-backdrop" onClick={close}><section className="modal" onClick={(e) => e.stopPropagation()}><div className="modal-head"><div><p className="eyebrow">A new possibility</p><h2>Create an activity</h2></div><button className="icon-button" data-testid="close-create-activity-button" onClick={close}><X size={18} /></button></div><form className="create-form" onSubmit={submit}><label>Activity name<input data-testid="activity-name-input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="What would you like to do?" required /></label><label>Description<textarea data-testid="activity-description-input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="A little context for future you…" /></label><div className="form-two"><label>Category<select data-testid="activity-category-select" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{categories.map((x) => <option key={x}>{x}</option>)}</select></label><label>Minutes<input data-testid="activity-duration-input" type="number" min="1" max="240" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} /></label></div><label>Optional goal<input data-testid="activity-goal-input" value={form.goal} onChange={(e) => setForm({ ...form, goal: e.target.value })} placeholder="What would feel good to finish?" /></label><button className="primary-button wide" data-testid="save-activity-button">Save activity <ArrowRight size={16} /></button></form></section></div>; }
 

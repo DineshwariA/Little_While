@@ -385,6 +385,29 @@ async def finish_session(session_id: str, data: FinishIn, user=Depends(current_u
     return {**session, **update}
 
 
+@api.get("/sessions/calendar")
+async def calendar_view(year: int, month: int, user=Depends(current_user)):
+    if month < 1 or month > 12 or year < 2000 or year > 3000:
+        raise HTTPException(422, "Choose a valid month.")
+    tz_name = user.get("timezone", "UTC")
+    sessions = await db.sessions.find({"user_id": user["id"], "outcome": {"$in": ["completed", "partial", "skipped"]}}, {"_id": 0}).sort("ended_at", -1).to_list(2000)
+    prefix = f"{year:04d}-{month:02d}"
+    days: dict[str, dict[str, Any]] = {}
+    for session in sessions:
+        key = day_key(session["ended_at"], tz_name)
+        if not key.startswith(prefix):
+            continue
+        entry = days.setdefault(key, {"date": key, "total_minutes": 0, "sessions": [], "categories": set(), "completed": 0, "partial": 0, "skipped": 0})
+        entry["total_minutes"] += session.get("actual_duration", 0)
+        entry["categories"].add(session.get("category", "Other"))
+        entry[session["outcome"]] = entry.get(session["outcome"], 0) + 1
+        entry["sessions"].append({"id": session["id"], "title": session["title"], "category": session.get("category", "Other"),
+                                   "actual_duration": session.get("actual_duration", 0), "outcome": session["outcome"],
+                                   "notes": session.get("notes", ""), "continued": session.get("continued", "")})
+    return {"month": prefix, "timezone": tz_name, "today": today_key(tz_name),
+            "days": [{**entry, "categories": sorted(entry["categories"])} for entry in sorted(days.values(), key=lambda x: x["date"])]}
+
+
 @api.post("/intentions")
 async def save_intention(data: IntentionIn, user=Depends(current_user)):
     doc = {"id": str(uuid.uuid4()), "user_id": user["id"], "date": today_key(user.get("timezone", "UTC")), "intention": data.intention, "created_at": iso(now())}

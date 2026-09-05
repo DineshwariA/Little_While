@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 3: Verified the new Calendar view (backend GET /api/sessions/calendar + frontend CalendarPage) plus regressed auth/dashboard/activities. All 6 pytest cases pass. Frontend UI verified via Playwright against the public preview URL. `npm install --dry-run` and `yarn build` succeed without --force/--legacy-peer-deps.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_calendar.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/iteration_3_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py is ~433 lines and dense (single-line handlers). Consider splitting into routers (auth, activities, sessions, calendar, intentions) as the file grows past 700 lines to preserve readability.",
+    "day_key silently falls back to value[:10] on exception, which would silently mis-bucket sessions across timezones if zoneinfo raised. Consider logging the exception and validating user's timezone at profile-save time.",
+    "calendar endpoint fetches up to 2000 sessions per call and filters in Python; when session history grows, add a Mongo query filter on ended_at using an inclusive UTC range derived from the requested month + user's timezone to reduce transfer.",
+    "Login button has no data-testid on /login route (only the form fields and nav items are testid-covered). Adding data-testid='login-submit' + 'login-email'/'login-password' would harden auth E2E tests."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_calendar.py",
+    "/app/test_reports/iteration_3.json",
+    "/app/test_reports/pytest/iteration_3_results.xml"
+  ],
+  "success_rate": {
+    "backend": "100% (6/6 calendar+regression pytest cases)",
+    "frontend": "100% of scripted calendar flow steps (login, nav, month label, grid, summary, active-day dot, detail panel with real data, prev/next month navigation, future-day disabled)"
+  },
+  "test_credentials": "littlewhile.test@example.com / LittleWhile123! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Created a handful of completed sessions on the test account via the backend tests (used as calendar-view fixture data). Also created one ephemeral TEST_ user for cross-user privacy assertion.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend calendar endpoint verified: 401 without cookie, 422 on month=13, shape {month, timezone, today, days:[]} correct. UI verified against public REACT_APP_BACKEND_URL. Playwright signed in via role='button' name='Sign in' because the sign-in submit button has no data-testid — worth adding. The calendar summary correctly aggregates active_days / sessions / total_minutes and future days are disabled (25 future cells in current test month). Detail panel shows title, category tag, outcome, notes, and continued notes from real sessions."
+}
