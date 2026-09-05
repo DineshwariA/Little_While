@@ -5,7 +5,8 @@ import { ArrowRight, BarChart3, BookOpen, Brain, CalendarDays, Check, ChevronDow
 import { Toaster, toast } from "sonner";
 import "@/App.css";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const BACKEND_ORIGIN = process.env.REACT_APP_BACKEND_URL && process.env.REACT_APP_BACKEND_URL !== "undefined" ? process.env.REACT_APP_BACKEND_URL.replace(/\/$/, "") : "";
+const API = `${BACKEND_ORIGIN}/api`;
 const api = axios.create({ baseURL: API, withCredentials: true });
 const categories = ["Creativity", "Learning", "Coding / Building", "Reading", "Wellness", "Movement", "Brain Gym", "Social", "Everyday Life", "Personal Growth"];
 const categoryIcons = { Creativity: Pencil, Learning: BookOpen, "Coding / Building": Zap, Reading: BookOpen, Wellness: Leaf, Movement: Compass, "Brain Gym": Brain, Social: Heart, "Everyday Life": Target, "Personal Growth": Sparkles };
