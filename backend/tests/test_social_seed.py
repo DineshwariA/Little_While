@@ -43,9 +43,9 @@ EXPECTED_COUNTS = {
     "Movement": 51,
     "Brain Gym": 51,
     "Social": 50,
-    "Everyday Life": 1,
+    "Everyday Life": 51,
 }
-EXPECTED_TOTAL = sum(EXPECTED_COUNTS.values())  # 408
+EXPECTED_TOTAL = sum(EXPECTED_COUNTS.values())  # 458
 
 
 def _new_email():
